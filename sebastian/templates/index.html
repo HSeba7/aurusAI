@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="top-bar tp-br">
+            <div class="left">
+                <img src="images/Switch container.png" class="logo-image-rob" alt="">
+            </div>
+            <div class="search-bar">
+                <input type="text" placeholder="Search setting, assistants, chats, snippets..." class="message-input">
+                <div class="search-button">
+                    <!-- <div class="ico ico-left"><img src="images/Horizontal container.png" class="ico-image" alt=""></div> -->
+                    <div class="ico ico-left"><p>Ctrl + S</p></div>
+                    <!-- <div class="ico ico-right"><img src="images/K-img.png" class="ico-image" alt=""></div> -->
+                </div>
+            </div>
+            <div class="last">
+                <div class="last-left">
+                    <button id="newChatButton" onclick="startNewChat()" class="top-button">New Chat</button>
+                </div>
+                <div class="last-right">
+                    <!-- <div class="ico ico-left"><img src="images/window2.png" class="ico-image" alt=""></div> -->
+                    <div class="ico ico-left"><p>Ctrl + N</p></div>
+                    <!-- <div class="ico ico-right"><img src="images/K.png" class="ico-image" alt=""></div> -->
+                    <!-- <div class="ico ico-right">N</div> -->
+                </div>
+            </div>
+        </div>
+
+        
+        
+
+        <div class="main-content">
+            <div id="chat-container">
+                <div id="chat-header">
+                    <p>Friendly Greeting with Sebastian</p>
+                </div>
+                <div class="top-rename">
+                    <img src="images/rename-btn.png" class="rename-icon">
+                <button id="rename-button">Rename</button>
+            </div>
+            </div>
+            <div class="main-content-text" id="intro-message">
+                <div class="bot-logo">
+                    <img src="images/logo-img.png" alt="Bot Logo" class="logo-img">
+                </div>
+                <h2>Hey Sebastian! I’m here to help, so ask me anything!</h2>
+                <div class="documentatin">
+                    <a href="#" class="documentation-link">Read Documentation</a>
+                </div>
+            </div>
+
+            <div id="chat-history" class="chat-history">
+                <!-- Chat messages will be appended here -->
+                <div class="min-in">
+
+                </div>
+            </div>
+        </div>
+
+        <div class="input_container">
+            <div class="input-area-outer">
+                <div class="msg-input">
+                    <textarea id="textInput"
+                placeholder="Hey Sebastian! Type a message, or press / for Snippets"
+                onkeypress="if(event.key === 'Enter') sendMessage()"></textarea>
+                    <div class="input-area">
+                        <div class="icons_images">
+                            <button class="icin-btn">
+                                <div class="icon-one">
+                                    <a href=""><img src="images/Rating.svg" alt=""></a>
+                                </div>
+                            </button>
+                            <button class="icin-btn">
+                                <div class="icon-one">
+                                    <a href=""><img src="images/icon-2.svg" alt=""></a>
+                                </div>
+                            </button>
+                            <button class="icin-btn">
+                                <div class="icon-three">
+                                    <a href=""><img src="images/icon-3.svg" alt=""></a>
+                                </div>
+                            </button>
+                            <button class="icin-btn">
+                                <div class="icon-one">
+                                    <a href=""><img src="images/icon-4.svg" alt=""></a>
+                                </div>
+                            </button>
+                            <button class="icin-btn">
+                                <div class="icon-one">
+                                    <a href=""><img src="images/Vertical container.svg" alt=""></a>
+                                </div>
+                            </button>
+                        </div>
+                        <button class="send-btn" onclick="sendMessage()"><img src="images/airplane icon.png"
+                                class="sendbtn" alt=""></button>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-content">
+                <p>Mode: openai 0 / 128000</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function sendMessage() {
+            const userInput = document.getElementById('textInput').value;
+            if (userInput.trim() === '') return;
+
+            document.getElementById('intro-message').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex';
+
+            // Append user message to the chat
+            appendMessage(userInput, 'user');
+
+            // Clear the input
+            document.getElementById('textInput').value = '';
+
+            // Create an empty bot message bubble to append the response to
+            const botMessageElement = appendMessage('', 'bot');
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: userInput })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let done = false;
+
+                // Stream response and append each chunk to the existing bot message element
+                while (!done) {
+                    const { value, done: readerDone } = await reader.read();
+                    done = readerDone;
+                    const chunk = decoder.decode(value, { stream: true });
+                    botMessageElement.innerText += chunk;
+
+                    scrollToBottom();
+                    botMessageElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function appendMessage(message, sender) {
+        const chatHistory = document.getElementById('chat-history');
+
+        // Create a container for the message and the avatar
+        const messageContainer = document.createElement('div');
+        messageContainer.classList.add('message-container', sender);
+
+        // Create the avatar
+        const avatar = document.createElement('img');
+        avatar.classList.add('avatar');
+        
+        // Assign the correct avatar image based on the sender
+        if (sender === 'user') {
+            avatar.classList.add('user-avatar');
+            avatar.src = 'images/Switch container.png'; // Replace with your user icon
+        } else if (sender === 'bot') {
+            avatar.classList.add('bot-avatar');
+            avatar.src = 'images/logo-img.png'; // Replace with your bot icon
+        }
+
+        // Create the message text container
+        const messageText = document.createElement('div');
+        messageText.classList.add('message-text');
+        messageText.innerText = message;
+
+        // Append the avatar and message to the message container
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(messageText);
+
+        // Append the message container to the chat history
+        chatHistory.appendChild(messageContainer);
+
+        // Ensure the new message scrolls into view
+        messageContainer.scrollIntoView({ behavior: 'smooth' });
+
+        // Return the message element if we need to append content later (for bot responses)
+        return messageText;
+}
+
+
+        function scrollToBottom() {
+            const chatHistory = document.getElementById('chat-history');
+            chatHistory.scrollTop = chatHistory.scrollHeight;  // Scroll to the bottom
+        }
+
+        function startNewChat() {
+            // Clear the chat history on the frontend
+            const chatHistory = document.getElementById('chat-history');
+            chatHistory.innerHTML = ''; // Clear chat messages
+
+            document.getElementById('intro-message').style.display = 'block';
+
+            // Send a request to reset the chat history on the server
+            fetch('http://127.0.0.1:5000/new_chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to reset chat on server');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(data.message); // Log the success message
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+
+        // Wait for the DOM to load before adding event listeners
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add click event to the New Chat button
+            const newChatButton = document.getElementById('newChatButton');
+            newChatButton.addEventListener('click', startNewChat);
+
+            // Add click event to the icons
+            const lastRight = document.querySelector('.last-right');
+            lastRight.addEventListener('click', startNewChat); // This will trigger the function for any click within the last-right div
+        });
+
+    </script>
+    </div>
+</body>
+
+</html>
